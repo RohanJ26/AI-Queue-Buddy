@@ -14,15 +14,19 @@ function speak(text) {
 export default function Dashboard({ ticketId }) {
   const [ticket, setTicket] = useState(null)
   const [disruption, setDisruption] = useState(null)
+  const [lastUpdate, setLastUpdate] = useState(null)
   const prevEta = useRef(null)
 
   async function fetchTicket() {
     try {
+      console.log('Fetching ticket:', ticketId)
       const res = await fetch(`/api/ticket/${ticketId}`, { cache: 'no-store' })
       if (res.ok) {
         const data = await res.json()
+        console.log('Ticket data received:', data)
         setTicket(data.ticket)
         setDisruption(data.disruptions)
+        setLastUpdate(new Date().toLocaleTimeString())
         if (data.ticket?.eta && data.ticket?.eta !== prevEta.current) {
           prevEta.current = data.ticket.eta
           const friendly = new Date(data.ticket.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -31,11 +35,13 @@ export default function Dashboard({ ticketId }) {
         return
       }
       if (res.status === 404) {
+        console.log('Ticket not found, clearing cookie')
         document.cookie = `ticketId=; Max-Age=0; path=/`
         window.location.reload()
         return
       }
     } catch (e) {
+      console.error('Error fetching ticket:', e)
     }
   }
 
@@ -43,25 +49,33 @@ export default function Dashboard({ ticketId }) {
     let retryTimeout = null
     let pollInterval = null
 
+    console.log('Dashboard mounted, ticketId:', ticketId)
     fetchTicket()
 
     function connectSSE() {
+      console.log('Connecting to SSE stream')
       const sse = new EventSource("/api/stream")
-      sse.onmessage = () => fetchTicket()
-      sse.onerror = () => {
+      sse.onopen = () => console.log('SSE connected')
+      sse.onmessage = (event) => {
+        console.log('SSE message received:', event.data)
+        fetchTicket()
+      }
+      sse.onerror = (error) => {
+        console.error('SSE error:', error)
         sse.close()
-        // backoff and retry SSE
         retryTimeout = setTimeout(connectSSE, 2000)
       }
       return sse
     }
 
     const sse = connectSSE()
-
-    // polling fallback in case SSE is blocked
-    pollInterval = setInterval(fetchTicket, 5000)
+    pollInterval = setInterval(() => {
+      console.log('Polling fallback triggered')
+      fetchTicket()
+    }, 5000)
 
     return () => {
+      console.log('Dashboard unmounting, cleaning up')
       sse && sse.close()
       if (retryTimeout) clearTimeout(retryTimeout)
       if (pollInterval) clearInterval(pollInterval)
@@ -86,12 +100,18 @@ export default function Dashboard({ ticketId }) {
             Reset
           </button>
         </div>
+        {lastUpdate && (
+          <div className="text-xs text-white/60 mt-2">
+            Last update: {lastUpdate}
+          </div>
+        )}
       </div>
     )
 
   const eta = ticket.eta ? new Date(ticket.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"
   const confidence = 95
   const progressWidth = Math.max(5, 100 - (ticket.position - 1) * 10)
+  const categoryLabel = ticket.category === 'priority' ? 'Priority' : ticket.category === 'extended' ? 'Extended' : 'Routine'
 
   return (
     <div className="space-y-6">
@@ -104,7 +124,7 @@ export default function Dashboard({ ticketId }) {
               </div>
               <div>
                 <h2 className="text-2xl font-bold">You're in line</h2>
-                <p className="text-white/80">Position #{ticket.position || "—"}</p>
+                <p className="text-white/80">Position #{ticket.position || "—"} • {categoryLabel}</p>
               </div>
             </div>
           </div>
@@ -127,6 +147,12 @@ export default function Dashboard({ ticketId }) {
             />
           </div>
         </div>
+        
+        {lastUpdate && (
+          <div className="text-xs text-white/60 mt-2">
+            Last update: {lastUpdate}
+          </div>
+        )}
       </div>
 
       {disruption && (

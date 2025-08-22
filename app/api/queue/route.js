@@ -8,8 +8,8 @@ export async function POST(req) {
   const body = await req.json();
   const action = body?.action || 'join';
   if (action === 'join') {
-    const { name } = body;
-    const result = join(name || 'Guest');
+    const { name, category } = body;
+    const result = join(name || 'Guest', category || 'routine');
     return Response.json(result);
   }
   if (action === 'complete') {

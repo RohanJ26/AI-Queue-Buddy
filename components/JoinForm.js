@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 export default function JoinForm({ onJoined }) {
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('routine');
   const [loading, setLoading] = useState(false);
 
   async function joinQueue() {
@@ -11,7 +12,7 @@ export default function JoinForm({ onJoined }) {
       const res = await fetch('/api/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'join', name })
+        body: JSON.stringify({ action: 'join', name, category })
       });
       let data = null;
       if (res.ok) {
@@ -55,6 +56,36 @@ export default function JoinForm({ onJoined }) {
           placeholder="Enter your name..."
           className="modern-input"
         />
+      </div>
+
+      <div className="space-y-2">
+        <label className="label">Appointment type</label>
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            type="button"
+            className={`btn text-sm ${category==='routine' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setCategory('routine')}
+          >
+            Routine
+          </button>
+          <button
+            type="button"
+            className={`btn text-sm ${category==='priority' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setCategory('priority')}
+          >
+            Priority
+          </button>
+          <button
+            type="button"
+            className={`btn text-sm ${category==='extended' ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setCategory('extended')}
+          >
+            Extended
+          </button>
+        </div>
+        <p className="text-xs text-white/70">
+          Routine ≈ 3 min • Priority ≈ 2 min • Extended ≈ 6 min per patient
+        </p>
       </div>
 
       <button
