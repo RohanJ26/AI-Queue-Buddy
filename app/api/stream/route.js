@@ -1,3 +1,5 @@
+export const revalidate = 0; // disables caching
+export const dynamic = "force-dynamic"; // ensures runtime only
 
 import { onUpdate, offUpdate, snapshot } from '@/lib/store';
 
