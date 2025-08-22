@@ -1,8 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/api/queue/route": "app/api/queue/route.js",
-  "/api/stream/route": "app/api/stream/route.js",
-  "/api/ticket/[id]/route": "app/api/ticket/[id]/route.js",
-  "/screen/page": "app/screen/page.js",
-  "/admin/page": "app/admin/page.js"
-}

@@ -164,3 +164,8 @@ body {
     box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
   }
 }
+
+/* Subtle divider */
+.hr-glass {
+  @apply border-t border-white/20;
+}

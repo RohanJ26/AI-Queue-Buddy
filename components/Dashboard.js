@@ -17,32 +17,74 @@ export default function Dashboard({ ticketId }) {
   const prevEta = useRef(null)
 
   async function fetchTicket() {
-    const res = await fetch(`/api/ticket/${ticketId}`)
-    if (res.ok) {
-      const data = await res.json()
-      setTicket(data.ticket)
-      setDisruption(data.disruptions)
-      if (data.ticket?.eta && data.ticket?.eta !== prevEta.current) {
-        prevEta.current = data.ticket.eta
-        const friendly = new Date(data.ticket.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        speak(`Your expected turn is ${friendly}. You're number ${data.ticket.position} in line.`)
+    try {
+      const res = await fetch(`/api/ticket/${ticketId}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setTicket(data.ticket)
+        setDisruption(data.disruptions)
+        if (data.ticket?.eta && data.ticket?.eta !== prevEta.current) {
+          prevEta.current = data.ticket.eta
+          const friendly = new Date(data.ticket.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          speak(`Your expected turn is ${friendly}. You're number ${data.ticket.position} in line.`)
+        }
+        return
       }
+      if (res.status === 404) {
+        document.cookie = `ticketId=; Max-Age=0; path=/`
+        window.location.reload()
+        return
+      }
+    } catch (e) {
     }
   }
 
   useEffect(() => {
+    let retryTimeout = null
+    let pollInterval = null
+
     fetchTicket()
-    const sse = new EventSource("/api/stream")
-    sse.onmessage = () => fetchTicket()
-    return () => sse.close()
+
+    function connectSSE() {
+      const sse = new EventSource("/api/stream")
+      sse.onmessage = () => fetchTicket()
+      sse.onerror = () => {
+        sse.close()
+        // backoff and retry SSE
+        retryTimeout = setTimeout(connectSSE, 2000)
+      }
+      return sse
+    }
+
+    const sse = connectSSE()
+
+    // polling fallback in case SSE is blocked
+    pollInterval = setInterval(fetchTicket, 5000)
+
+    return () => {
+      sse && sse.close()
+      if (retryTimeout) clearTimeout(retryTimeout)
+      if (pollInterval) clearInterval(pollInterval)
+    }
   }, [ticketId])
 
   if (!ticket)
     return (
       <div className="card pulse-glow">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-          <span>Loading your ticket...</span>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <span>Loading your ticket...</span>
+          </div>
+          <button
+            className="btn btn-ghost text-xs"
+            onClick={() => {
+              document.cookie = `ticketId=; Max-Age=0; path=/`
+              window.location.reload()
+            }}
+          >
+            Reset
+          </button>
         </div>
       </div>
     )
