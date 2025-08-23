@@ -6,8 +6,21 @@ function speak(text) {
     const utter = new SpeechSynthesisUtterance(text)
     utter.rate = 1
     utter.pitch = 1
-    speechSynthesis.cancel()
-    speechSynthesis.speak(utter)
+    
+    // Only cancel if there's no speech in progress
+    if (!speechSynthesis.speaking) {
+      speechSynthesis.cancel()
+    }
+    
+    // Wait for current speech to finish before starting new one
+    const startSpeech = () => {
+      if (speechSynthesis.speaking) {
+        setTimeout(startSpeech, 100)
+        return
+      }
+      speechSynthesis.speak(utter)
+    }
+    startSpeech()
   } catch {}
 }
 
@@ -170,7 +183,7 @@ export default function Dashboard({ ticketId }) {
             </div>
             <div>
               <p className="font-semibold text-yellow-100">Delay Update</p>
-              <p className="text-yellow-200/90 mt-1">{disruption.message}. New ETA adjusted.</p>
+              <p className="text-yellow-200/90 mt-1">{disruption.message} by {disruption.delayMinutes} minutes. New ETA adjusted.</p>
             </div>
           </div>
         </div>

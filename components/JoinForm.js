@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { showToast } from '@/components/Toast';
 
 export default function JoinForm({ onJoined }) {
   const [name, setName] = useState('');
@@ -17,6 +18,7 @@ export default function JoinForm({ onJoined }) {
       let data = null;
       if (res.ok) {
         data = await res.json();
+        showToast('Successfully joined the queue!', 'success');
         // Set the cookie in the browser
         document.cookie = `ticketId=${data.id};path=/`;
         // Force a page reload to show the dashboard

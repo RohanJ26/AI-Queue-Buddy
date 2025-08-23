@@ -7,7 +7,8 @@ export default function Screen() {
   async function refresh(){ const r=await fetch('/api/queue'); setSnap(await r.json()); }
   useEffect(()=>{refresh(); const sse = new EventSource('/api/stream'); sse.onmessage=refresh; return ()=>sse.close();},[]);
   const waiting = snap?.tickets?.filter(t=>t.status==='waiting') || [];
-
+  console.log(snap);
+  
   return (
     <main className="space-y-6">
       <h1 className="text-4xl font-bold">Now Serving</h1>
@@ -23,7 +24,8 @@ export default function Screen() {
       {snap?.disruptions && (
         <div className="card border-2 border-yellow-400/50">
           <p className="font-semibold">Notice</p>
-          <p>{snap.disruptions.message}</p>
+          <span>{snap.disruptions.message}</span>
+          <span> {snap.disruptions.delayMinutes} minutes</span>
         </div>
       )}
     </main>

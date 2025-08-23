@@ -1,9 +1,13 @@
 
 'use client';
 import { useEffect, useState } from 'react';
+import DelayPopup from '@/components/DelayPopup';
+import { showToast } from '@/components/Toast';
 
 export default function Admin() {
   const [snapshot, setSnapshot] = useState(null);
+  const [isDelayPopupOpen, setIsDelayPopupOpen] = useState(false);
+
   async function refresh() {
     const res = await fetch('/api/queue');
     setSnapshot(await res.json());
@@ -12,15 +16,24 @@ export default function Admin() {
 
   async function complete() {
     await fetch('/api/queue',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'complete'})});
+    showToast('Next ticket completed successfully', 'success');
     refresh();
   }
+
   async function disrupt() {
-    const msg = prompt('Delay reason?', 'Doctor delayed by 10 mins');
-    await fetch('/api/queue',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'disrupt', message: msg, delayMinutes: 10})});
+    setIsDelayPopupOpen(true);
+  }
+
+  async function handleDelaySubmit(message, delayMinutes) {
+    await fetch('/api/queue',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'disrupt', message, delayMinutes})});
+    setIsDelayPopupOpen(false);
+    showToast(`Delay of ${delayMinutes} minutes added`, 'info');
     refresh();
   }
+
   async function clearDisruption() {
     await fetch('/api/queue',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'clearDisruption'})});
+    showToast('Delay has been cleared', 'success');
     refresh();
   }
 
@@ -36,6 +49,12 @@ export default function Admin() {
         {JSON.stringify(snapshot, null, 2)}
       </pre>
       <p className="text-white/70 text-sm">Use this to simulate real-world queue flow for your demo.</p>
+
+      <DelayPopup
+        isOpen={isDelayPopupOpen}
+        onClose={() => setIsDelayPopupOpen(false)}
+        onSubmit={handleDelaySubmit}
+      />
     </main>
   );
 }
